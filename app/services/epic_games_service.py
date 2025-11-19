@@ -5,6 +5,7 @@
 # Description: 游戏商城控制句柄
 
 import json
+import re
 from contextlib import suppress
 from json import JSONDecodeError
 from typing import List
@@ -280,17 +281,29 @@ class EpicGames:
                 continue
 
             # 将免费游戏添加至购物车
-            add_to_cart_btn = page.locator("//aside//button[@data-testid='add-to-cart-cta-button']")
+            add_to_cart_btn = (
+                page.locator("//aside//button")
+                .filter(has_text=re.compile(r"(Add\s+to\s+Cart|View\s+in\s+Cart)", re.IGNORECASE))
+                .first
+            )
             try:
-                text = await add_to_cart_btn.text_content()
-                if text == "View In Cart":
+                await expect(add_to_cart_btn).to_be_visible(timeout=30000)
+                text = (await add_to_cart_btn.text_content() or "").strip().lower()
+                if "view" in text:
                     logger.debug(f"🙌 Already in the shopping cart - {url=}")
                     has_pending_free_promotion = True
-                elif text == "Add To Cart":
+                elif "add" in text:
                     await add_to_cart_btn.click()
                     logger.debug(f"🙌 Add to the shopping cart - {url=}")
-                    await expect(add_to_cart_btn).to_have_text("View In Cart")
+                    with suppress(TimeoutError):
+                        await expect(add_to_cart_btn).to_have_text(
+                            re.compile(r"View\s+In\s+Cart", re.IGNORECASE)
+                        )
                     has_pending_free_promotion = True
+                else:
+                    logger.warning(
+                        f"Unrecognized add-to-cart CTA state - {url=} {text=}"
+                    )
 
             except Exception as err:
                 logger.warning(f"Failed to add promotion to cart - {err}")
