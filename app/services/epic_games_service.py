@@ -249,6 +249,22 @@ class EpicGames:
                 return True
 
     @staticmethod
+    async def _resolve_add_to_cart_button(page: Page):
+        candidate_locators = [
+            page.locator("//aside//button")
+            .filter(has_text=re.compile(r"(Add\s+to\s+Cart|View\s+in\s+Cart)", re.IGNORECASE))
+            .first,
+            page.locator("//button[@data-testid='add-to-cart-cta-button-pdp-sidebar']").first,
+            page.locator("//button[@data-testid='add-to-cart-cta-button']").first,
+        ]
+
+        for locator in candidate_locators:
+            with suppress(Exception):
+                await expect(locator).to_be_visible(timeout=5000)
+                return locator
+        return None
+
+    @staticmethod
     async def add_promotion_to_cart(page: Page, urls: List[str]) -> bool:
         has_pending_free_promotion = False
 
@@ -281,13 +297,13 @@ class EpicGames:
                 continue
 
             # 将免费游戏添加至购物车
-            add_to_cart_btn = (
-                page.locator("//aside//button")
-                .filter(has_text=re.compile(r"(Add\s+to\s+Cart|View\s+in\s+Cart)", re.IGNORECASE))
-                .first
-            )
+            add_to_cart_btn = await EpicGames._resolve_add_to_cart_button(page)
+            if add_to_cart_btn is None:
+                logger.warning("Add-to-cart CTA not found on detail page", url=url)
+                continue
             try:
                 await expect(add_to_cart_btn).to_be_visible(timeout=30000)
+                await expect(add_to_cart_btn).to_be_enabled(timeout=30000)
                 text = (await add_to_cart_btn.text_content() or "").strip().lower()
                 if "view" in text:
                     logger.debug(f"🙌 Already in the shopping cart - {url=}")
