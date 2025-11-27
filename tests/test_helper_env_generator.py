@@ -1,4 +1,18 @@
+import os
+import sys
 from pathlib import Path
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+APP_ROOT = PROJECT_ROOT / "app"
+
+for candidate in (str(APP_ROOT), str(PROJECT_ROOT)):
+    if candidate not in sys.path:
+        sys.path.insert(0, candidate)
+
+# Seed minimal required env vars so EpicSettings can initialize without secrets
+os.environ.setdefault("GEMINI_API_KEY", "test")
+os.environ.setdefault("EPIC_EMAIL", "test@example.com")
+os.environ.setdefault("EPIC_PASSWORD", "test-password")
 
 from settings import EpicSettings
 from env_generator import generate_env_example_merged

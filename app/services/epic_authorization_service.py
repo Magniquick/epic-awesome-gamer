@@ -83,10 +83,20 @@ class EpicAuthorization:
             await email_input.type(settings.EPIC_EMAIL)
 
             # 2. 点击继续按钮
-            await self.page.click("#continue")
+            continue_btn = self.page.locator("#continue")
+            await expect(continue_btn).to_be_visible(timeout=30000)
+            await expect(continue_btn).to_be_enabled(timeout=30000)
+            try:
+                await continue_btn.click(timeout=5000, no_wait_after=True)
+            except Exception:
+                with suppress(Exception):
+                    await continue_btn.click(timeout=3000, force=True, no_wait_after=True)
+                with suppress(Exception):
+                    await email_input.press("Enter")
 
             # 3. 输入密码
             password_input = self.page.locator("#password")
+            await expect(password_input).to_be_visible(timeout=30000)
             await password_input.clear()
             await password_input.type(settings.EPIC_PASSWORD.get_secret_value())
 
